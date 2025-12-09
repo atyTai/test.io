@@ -1,0 +1,27 @@
+🔰 第1段階（今すぐできる論理分離）
+
+できる限りリソースに env=dev|stg|prod のタグ付
+
+Permission Set を6種類作成（Admin × 3、ReadOnly × 3）
+
+Deny によるクロス環境の誤操作防止
+
+Identity Center で割り当て
+
+🟡 第2段階（タグベース ABAC による最適化）
+
+AdministratorAccess を縮小
+
+タグでアクセス範囲を明確化
+
+“prodは表示不可” を徹底
+
+🟥 第3段階（アカウント分離による完全隔離）
+
+Organizations で dev/stg/prod のアカウント新設
+
+dev/stg/prod のリソースを再構築
+
+CI/CD で prod へデプロイのみ許可
+
+SCP で本番環境の誤操作を完全防止
