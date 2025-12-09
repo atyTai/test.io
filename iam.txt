@@ -10,7 +10,7 @@ Identity Center で割り当て(アクセスポータルの画面から、各ア
 
 🟡 第2段階（タグベース ABAC による最適化 = アタッチするIAMポリシーのできる限りの最適化）
 
-Admin（AdministratorAccess） を縮小
+Admin（AdministratorAccess） を縮小、またはAdmin、ReadOnly以外を作成しより細分化
 
 タグでアクセス範囲をより明確化
 
