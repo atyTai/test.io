@@ -24,4 +24,22 @@ dev/stg のリソースを再構築、prodのdev/stgのリソースの削除
 
 SCPの最適化（必要であれば本番環境の誤操作を完全防止など）
 
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "DenyProdAndStgAccess",
+            "Effect": "Deny",
+            "Action": "*",
+            "Resource": "*",
+            "Condition": {
+                "StringEquals": {
+                    "aws:ResourceTag/env": ["prod", "stg"]
+                }
+            }
+        }
+    ]
+}
+
+
 IAMポリシーは第2段階までのものをほぼそのまま採用
