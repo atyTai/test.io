@@ -1,45 +1,340 @@
-🔰 第1段階（今すぐできる論理分離）
+🔰承知しました。
+ここでは「第1段階を“確実に・安全に・短期間で”実施するための実務手順」を、順番・注意点・効率化手段まで含めて整理します。
+読み終えた時点で「この順でやれば事故らない」と説明できるレベルにします。
 
-できる限りリソースに env=dev|stg|prod のタグ付
 
-Permission Set をdev|stg|prod × Admin、ReadOnly　の6種類作成（必要であればもっと細分化）
+---
 
-Deny によるクロス環境の誤操作防止（例：devのロールにはprod,stgのタグがあるリソースをDenyとするポリシーをアタッチ）
+🔰 第1段階：実施手順（完全版・実務向け）
 
-Identity Center で割り当て(アクセスポータルの画面から、各アカウントで上記6種類のマネジメントコンソールにアクセスできるようにする)
+全体像（最初に俯瞰）
 
-🟡 第2段階（タグベース ABAC による最適化 = アタッチするIAMポリシーのできる限りの最適化）
+やることは4ブロックだけです。
 
-Admin（AdministratorAccess） を縮小、またはAdmin、ReadOnly以外を作成しより細分化
+1. 事前整理（タグ設計・影響範囲確認）
 
-タグでアクセス範囲をより明確化
 
-“prodは表示不可” を徹底
+2. envタグの付与（効率的に）
 
-🟥 第3段階（アカウント分離による完全隔離）
 
-Organizations で dev/stg のアカウント新設
+3. Permission Set（6種）の作成
 
-dev/stg のリソースを再構築、prodのdev/stgのリソースの削除
 
-SCPの最適化（必要であれば本番環境の誤操作を完全防止など）
+4. Identity Center への割り当てと検証
+
+
+
+> ❗ 重要
+IAMポリシーをいきなり厳しくしない
+→ 最初は「Admin + Cross-Env Deny」だけ
+→ 既存業務を止めないことが最優先
+
+
+
+
+---
+
+① 事前整理（必須・30分〜1時間）
+
+1-1. envタグのルールを明文化（先に決める）
+
+必ず 1種類に統一 してください。
+
+キー   : env
+値     : dev | stg | prod
+
+❌ environment / Env / stage など混在させない
+→ ABACが破綻します
+
+
+---
+
+1-2. 「今どれが本番か」を一覧化（完璧でなくてよい）
+
+Excel / スプレッドシートでOK。
+
+サービス	リソース名	環境	備考
+
+EC2	web-01	prod	本番
+S3	app-log	prod	本番
+RDS	db-test	stg	検証
+
+
+> ❗ 100%正確でなくていい
+→ 第1段階では「明らかにprodなもの」から付ける
+
+
+
+
+---
+
+② envタグ付与（効率的なやり方込み）
+
+2-1. タグ付けの優先順位（重要）
+
+すべて一気にやらない。優先順位あり。
+
+優先度 高（まずやる）
+
+EC2
+
+RDS / Aurora
+
+S3
+
+ALB / NLB
+
+Lambda
+
+DynamoDB
+
+
+→ 誤操作の影響が大きいもの
+
+優先度 中
+
+EBS
+
+EFS
+
+CloudWatch Log Group
+
+SQS / SNS
+
+
+優先度 低（第1段階では後回し可）
+
+IAM（※ABAC効かない）
+
+Route53
+
+CloudTrail
+
+Organizations 関連
+
+
+
+---
+
+2-2. 一番効率が良いタグ付け方法（実務）
+
+✅ 方法①：Tag Editor（最推奨）
+
+AWSコンソール → Resource Groups → Tag Editor
+
+手順：
+
+1. 対象リージョン選択
+
+
+2. サービスをまとめて選択（EC2, RDS, S3 など）
+
+
+3. フィルタで名前・既存タグで絞る
+
+
+4. 複数リソースを一括選択
+
+
+5. env=prod などを一括付与
+
+
+
+👉 数百リソースでも数分
+
+
+---
+
+✅ 方法②：サービス個別一括（EC2など）
+
+例：EC2
+
+インスタンス一覧 → 複数選択 → タグ → 一括編集
+
+
+
+---
+
+△ 方法③：CLI（慣れている人向け）
+
+aws ec2 create-tags \
+  --resources i-xxxx i-yyyy \
+  --tags Key=env,Value=prod
+
+※ 第1段階では 無理にCLI不要
+
+
+---
+
+2-3. 「まだenvタグが付いてないリソース」への考え方
+
+envタグがない = どの環境でも操作不可になりうる
+
+ただし第1段階では Admin + Deny条件付きなので即死しない
+
+
+👉 後から順次付ければOK
+
+
+---
+
+③ Permission Set（6種）の作成
+
+3-1. 作るPermission Set一覧（確定）
+
+dev-AdministratorAccess
+stg-AdministratorAccess
+prod-AdministratorAccess
+
+dev-ReadOnlyAccess
+stg-ReadOnlyAccess
+prod-ReadOnlyAccess
+
+
+---
+
+3-2. 各 Permission Set に付けるもの（共通）
+
+(1) AWS管理ポリシー（1つ）
+
+AdministratorAccess
+または
+
+ReadOnlyAccess
+
+
+(2) Cross-Env Deny ポリシー（1つ）
+
+例：dev 用
 
 {
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Sid": "DenyProdAndStgAccess",
-            "Effect": "Deny",
-            "Action": "*",
-            "Resource": "*",
-            "Condition": {
-                "StringEquals": {
-                    "aws:ResourceTag/env": ["prod", "stg"]
-                }
-            }
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "DenyProdAndStg",
+      "Effect": "Deny",
+      "Action": "*",
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:ResourceTag/env": ["prod", "stg"]
         }
-    ]
+      }
+    }
+  ]
 }
 
+※ stg / prod も同様に値だけ変える
 
-IAMポリシーは第2段階までのものをほぼそのまま採用
+
+---
+
+3-3. この設計が「安全」な理由
+
+Allow を削らない
+
+Deny だけ追加
+
+Deny は タグがあるものだけに効く
+
+
+👉 既存業務が止まりにくい
+
+
+---
+
+④ Identity Center への割り当て
+
+4-1. 割り当て方針（現実的）
+
+通常作業者
+→ dev-Admin / stg-Admin
+
+本番作業者
+→ prod-Admin（限定人数）
+
+閲覧者
+→ *-ReadOnly
+
+
+
+---
+
+4-2. AWS Access Portal での見え方
+
+ユーザーは：
+
+1. Access Portal にログイン
+
+
+2. アカウントを選択
+
+
+3. Permission Set（dev/stg/prod + 権限）を選択
+
+
+4. コンソールへ入る
+
+
+
+→ 環境の取り違えが激減
+
+
+---
+
+⑤ 検証（必須・ここで止めてもOK）
+
+検証チェックリスト
+
+[ ] dev-Admin で prod の EC2 が見えない / 操作不可
+
+[ ] prod-ReadOnly で変更系が拒否される
+
+[ ] envタグなしリソースがどう見えるか確認
+
+[ ] CloudTrail に AssumeRole が記録されている
+
+
+
+---
+
+⑥ 第1段階を「完了」とする基準
+
+以下を満たせば 一旦止めてOK です。
+
+envタグが主要リソースに付いた
+
+dev/stg/prod の Permission Set が存在
+
+Cross-Env Deny が効いている
+
+業務が止まっていない
+
+
+
+---
+
+✅ まとめ（上司・第三者向け一言）
+
+> 「まずはタグ＋Permission Set＋Denyだけで、
+本番誤操作を“構造的に不可能”にしました。
+既存業務は変えず、安全装置だけ追加しています。」
+
+
+
+
+---
+
+必要であれば次に：
+
+「envタグを付けられない代表的リソース一覧と扱い」
+
+「Denyが効きすぎた時の切り戻し手順」
+
+「CloudTrailでの確認方法（画面付き説明）」
+
+「第1段階だけで終わる場合の“最終形”」
+
+
+も説明できます。
+次はどこを深掘りしますか。
