@@ -1,0 +1,108 @@
+・Envで良いか　　　Environment
+・その値はそちらで良いか
+
+
+Excelで「今どれがprod,dev,stgか」を一覧化（完璧でなくてよい）
+
+
+
+
+優先度 高（まずやる）
+
+EC2
+
+RDS / Aurora
+
+S3
+
+ALB / NLB
+
+Lambda
+
+DynamoDB
+
+→ 誤操作の影響が大きいもの
+
+優先度 中
+
+EBS
+
+EFS
+
+CloudWatch Log Group
+
+SQS / SNS
+
+優先度 低（第1段階では後回し可）
+
+IAM（※ABAC効かない）
+
+Route53
+
+CloudTrail
+
+Organizations 関連
+
+
+
+
+2-2. 一番効率が良いタグ付け方法（実務）
+✅ 方法①：Tag Editor（最推奨）
+
+AWSコンソール → Resource Groups → Tag Editor
+
+手順：
+
+対象リージョン選択
+
+サービスをまとめて選択（EC2, RDS, S3 など）
+
+フィルタで名前・既存タグで絞る
+
+複数リソースを一括選択
+
+env=prod などを一括付与
+
+👉 数百リソースでも数分
+
+✅ 方法②：サービス個別一括（EC2など）
+
+例：EC2
+
+インスタンス一覧 → 複数選択 → タグ → 一括編集
+
+
+
+
+「まだenvタグが付いてないリソース」への考え方
+⇒どのアクセスでも権限が制限されない
+
+
+許可セットの作成
+AdministratorAccess
+ReadOnlyAccess
+dev-AdministratorAccess
+stg-AdministratorAccess
+prod-AdministratorAccess
+-AdministratorAccess
+
+
+
+
+. この設計が「安全」な理由
+
+Allow を削らない
+
+Deny だけ追加
+
+Deny は タグがあるものだけに効く
+
+
+
+
+dev_Cross_Env_Denyポリシーで良いか
+
+
+
+
+
