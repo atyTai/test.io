@@ -1,0 +1,12 @@
+② CloudFormation で そのまま自動化できる範囲
+◎ ほぼ100%自動化できるもの
+項目	CloudFormation
+EC2 (Windows) 起動	✅
+AMI / InstanceType / KeyPair	✅
+SecurityGroup（3389 / 443 等）	✅
+Elastic IP 作成 & Associate	✅
+IAM Role（SSM用など）	✅
+ALB/NLB（使うなら）	✅
+ACM証明書発行	✅
+WAF WebACL 作成	✅
+WAF と ALB / CloudFront の紐付け	✅
