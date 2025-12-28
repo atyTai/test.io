@@ -1,0 +1,18 @@
+単体インスタンスの起動:
+bash
+aws ec2 start-instances --instance-ids i-xxxxxxxxxxxxxxxxx
+<instance_id>の部分を実際のインスタンスIDに置き換えます。 
+起動後の確認と待機
+インスタンスの状態を確認する:
+bash
+aws ec2 describe-instance-status --instance-ids i-xxxxxxxxxxxxxxxxx
+jqを使うと、表示を絞り込めます。
+
+
+
+AWS CLIでEC2インスタンスを停止するコマンドは aws ec2 stop-instances で、--instance-ids オプションで停止したいインスタンスID（例: i-xxxxxxxxxxxxxxxxx）を指定します。複数のIDはスペース区切りで指定可能で、強制停止したい場合は --force オプションも追加できます。 
+bash
+aws ec2 stop-instances --instance-ids <インスタンスID>
+または　複数のインスタンスを停止する場合の例
+bash
+aws ec2 stop-instances --instance-ids i-xxxxxxxxxxxxxxxxx i-yyyyyyyyyyyyyyyyy
