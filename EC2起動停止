@@ -16,3 +16,20 @@ aws ec2 stop-instances --instance-ids <インスタンスID>
 または　複数のインスタンスを停止する場合の例
 bash
 aws ec2 stop-instances --instance-ids i-xxxxxxxxxxxxxxxxx i-yyyyyyyyyyyyyyyyy
+
+[profile onota7-admin]
+sso_session = admin-session
+sso_account_id = 66090471xxxx
+sso_role_name = AdministratorAccess
+region = ap-northeast-1
+output = json
+[sso-session admin-session]
+sso_start_url = https://d-9567a921db.awsapps.com/start
+sso_region = ap-northeast-1
+sso_registration_scopes = sso:account:access
+[profile sso-user1-admin]
+sso_session = admin-session
+sso_account_id = 09061848xxxx
+sso_role_name = AdministratorAccess
+region = ap-northeast-1
+output = json
