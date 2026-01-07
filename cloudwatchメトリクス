@@ -1,0 +1,152 @@
+状況ありがとうございます。
+結論から言うと CloudWatch コンソール画面のスクリーンショット取得をそのまま自動化するのは非推奨 で、
+CloudWatch API からグラフ画像（PNG）を直接生成・保存する方法が最適解です。
+以下、
+1️⃣ なぜコンソールSS自動化が微妙か
+2️⃣ 推奨アーキテクチャ
+3️⃣ 具体的なCLI / Python例
+4️⃣ よくある拡張・注意点
+の順で整理します。
+1️⃣ コンソールのスクリーンショット自動化が微妙な理由
+技術的には以下も可能です：
+Selenium / Playwright でAWSコンソール操作
+headless Chromeでスクショ取得
+しかし 業務用途では非推奨です。
+理由：
+IAM Identity Center / MFA / セッション期限で不安定
+UI変更に非常に弱い
+実行環境構築が重い（Chrome + driver）
+AWS的に「想定されていない使い方」
+👉 CloudWatchは「画像出力API」を公式に提供しています
+2️⃣ 推奨構成（正攻法）
+✔ CloudWatch GetMetricWidgetImage API を使う
+コードをコピーする
+
+CloudWatch
+ └─ GetMetricWidgetImage
+     └─ PNG画像としてグラフを生成
+         └─ ローカル or S3 に保存
+できること
+メトリクス指定
+期間（start / end or relative）
+統計値（Average, Maximumなど）
+複数メトリクスを1画像にまとめる
+タイトル・色・サイズ指定
+👉 コンソールで見ているグラフとほぼ同等
+3️⃣ 実装例
+① AWS CLI（単発・検証向け）
+widget.json
+コードをコピーする
+Json
+{
+  "width": 800,
+  "height": 400,
+  "start": "-PT6H",
+  "end": "PT0H",
+  "title": "EC2 CPU Utilization",
+  "metrics": [
+    [ "AWS/EC2", "CPUUtilization", "InstanceId", "i-xxxxxxxx" ]
+  ],
+  "stat": "Average",
+  "period": 300
+}
+CLI実行
+コードをコピーする
+Bash
+aws cloudwatch get-metric-widget-image \
+  --metric-widget file://widget.json \
+  --output-format png \
+  output.png
+➡ output.png が生成されます。
+② Python（本命・自動化向け）
+コードをコピーする
+Python
+import boto3
+import json
+from datetime import datetime
+
+cloudwatch = boto3.client("cloudwatch")
+
+widget = {
+    "width": 800,
+    "height": 400,
+    "start": "-PT24H",
+    "end": "PT0H",
+    "title": "ALB RequestCount",
+    "metrics": [
+        ["AWS/ApplicationELB", "RequestCount", "LoadBalancer", "app/xxx"]
+    ],
+    "stat": "Sum",
+    "period": 300
+}
+
+response = cloudwatch.get_metric_widget_image(
+    MetricWidget=json.dumps(widget),
+    OutputFormat="png"
+)
+
+filename = f"alb_request_{datetime.now():%Y%m%d_%H%M}.png"
+with open(filename, "wb") as f:
+    f.write(response["MetricWidgetImage"])
+③ 複数メトリクス × 複数期間（ループ）
+コードをコピーする
+Python
+periods = ["-PT1H", "-PT6H", "-P1D"]
+metrics = [
+    ("AWS/EC2", "CPUUtilization"),
+    ("AWS/EC2", "NetworkIn")
+]
+
+for start in periods:
+    for ns, metric in metrics:
+        widget["start"] = start
+        widget["title"] = f"{metric} ({start})"
+
+        response = cloudwatch.get_metric_widget_image(
+            MetricWidget=json.dumps(widget),
+            OutputFormat="png"
+        )
+
+        with open(f"{metric}_{start}.png", "wb") as f:
+            f.write(response["MetricWidgetImage"])
+4️⃣ 保存先の選択肢
+✔ ローカル
+レポート作成
+手動確認用
+✔ S3（おすすめ）
+コードをコピーする
+Python
+s3 = boto3.client("s3")
+s3.put_object(
+    Bucket="my-report-bucket",
+    Key=f"cloudwatch/{filename}",
+    Body=response["MetricWidgetImage"],
+    ContentType="image/png"
+)
+➡
+バージョン管理
+Athena / Glue 連携
+Slack / メール通知と相性◎
+5️⃣ よくある拡張パターン
+要件
+実現方法
+定期実行
+EventBridge + Lambda
+Excel / PPT
+Pythonで貼り付け
+障害時のみ取得
+Alarm → Lambda
+1画面に複数
+metrics配列に複数定義
+色指定
+"color": "#ff0000"
+6️⃣ 結論（重要）
+✅ やるべき方法
+CloudWatch GetMetricWidgetImage
+CLI / Pythonで完全自動化
+❌ 避けるべき方法
+コンソール画面のスクリーンショット自動操作
+もしよければ次に：
+「今やっている手作業の具体例（メトリクス・期間・保存先）」
+「Lambda化 or ローカルcronか」
+を教えていただければ そのまま使える完成形スクリプトまで落とします。
