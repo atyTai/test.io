@@ -1,0 +1,34 @@
+① S3にPDF
+s3://textract-input-pdf/test.pdf
+
+② OCR開始（CLI）
+aws textract start-document-text-detection \
+  --document-location S3Object="{Bucket=textract-input-pdf,Name=test.pdf}"
+
+
+→ JobId を取得
+
+③ 結果取得（CLI）
+aws textract get-document-text-detection \
+  --job-id xxxxxxxxx
+
+④ Pythonで処理（ローカル）
+import boto3
+
+textract = boto3.client("textract")
+
+res = textract.get_document_text_detection(
+    JobId="xxxxxxxxx"
+)
+
+lines = [
+    b["Text"]
+    for b in res["Blocks"]
+    if b["BlockType"] == "LINE"
+]
+
+full_text = "\n".join(lines)
+print(full_text)
+
+
+👉 これで全文字取得完了
