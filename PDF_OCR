@@ -1,13 +1,15 @@
-pip install paddleocr paddlepaddle
+https://cloud.google.com/vision/pricing?utm_source=chatgpt.com&hl=ja
 
 
-from paddleocr import PaddleOCR
+📊 100 万ページ OCR の計算
+基本単価（1.5ドル/1000）
+1,000,000 / 1,000 × $1.50 = $1,500
 
-ocr = PaddleOCR(lang="japan")
 
-result = ocr.predict("test.png")
+👉 約 $1,500 / 月
 
-texts = result[0]["rec_texts"]
+大量割引後（5M超）
 
-for t in texts:
-    print(t)
+100 万は割引対象外
+
+500 万以上は $0.60 に下がる
