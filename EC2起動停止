@@ -17,19 +17,46 @@ aws ec2 stop-instances --instance-ids <インスタンスID>
 bash
 aws ec2 stop-instances --instance-ids i-xxxxxxxxxxxxxxxxx i-yyyyyyyyyyyyyyyyy
 
-[profile onota7-admin]
-sso_session = admin-session
-sso_account_id = 66090471xxxx
-sso_role_name = AdministratorAccess
-region = ap-northeast-1
-output = json
-[sso-session admin-session]
-sso_start_url = https://d-9567a921db.awsapps.com/start
-sso_region = ap-northeast-1
-sso_registration_scopes = sso:account:access
-[profile sso-user1-admin]
-sso_session = admin-session
-sso_account_id = 09061848xxxx
-sso_role_name = AdministratorAccess
-region = ap-northeast-1
-output = json
+ーーー
+
+#!/bin/bash
+
+# ==========================
+# EC2起動シェルスクリプト
+# ==========================
+
+# 引数チェック
+if [ $# -ne 1 ]; then
+  echo "使い方: $0 <EC2インスタンスID>"
+  exit 1
+fi
+
+INSTANCE_ID="$1"
+
+echo "-----------------------------------"
+echo "EC2インスタンスを起動します"
+echo "インスタンスID: ${INSTANCE_ID}"
+echo "-----------------------------------"
+echo -n "本当に起動しますか？ (y/N): "
+read ANSWER
+
+case "$ANSWER" in
+  y|Y)
+    echo "起動を開始します..."
+    ;;
+  *)
+    echo "起動をキャンセルしました。"
+    exit 0
+    ;;
+esac
+
+# EC2起動
+aws ec2 start-instances --instance-ids "${INSTANCE_ID}" > /dev/null 2>&1
+
+# 結果判定
+if [ $? -eq 0 ]; then
+  echo "✅ EC2インスタンスを起動できました。"
+else
+  echo "❌ EC2インスタンスの起動に失敗しました。"
+  exit 1
+fi
