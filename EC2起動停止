@@ -60,3 +60,71 @@ else
   echo "❌ EC2インスタンスの起動に失敗しました。"
   exit 1
 fi
+
+ーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーー
+
+#!/bin/bash
+
+# ==========================
+# EC2起動シェルスクリプト
+# 引数: 論理名
+# ==========================
+
+# 論理名 → インスタンスID対応表
+declare -A INSTANCE_MAP=(
+  ["web-prod"]="i-0aaa1111bbbb2222c"
+  ["web-stg"]="i-0ddd3333eeee4444f"
+  ["batch-dev"]="i-05555666677778888"
+)
+
+# 引数チェック
+if [ $# -ne 1 ]; then
+  echo "使い方: $0 <インスタンス論理名>"
+  echo "利用可能な論理名:"
+  for key in "${!INSTANCE_MAP[@]}"; do
+    echo "  - $key"
+  done
+  exit 1
+fi
+
+LOGICAL_NAME="$1"
+INSTANCE_ID="${INSTANCE_MAP[$LOGICAL_NAME]}"
+
+# 論理名存在チェック
+if [ -z "$INSTANCE_ID" ]; then
+  echo "❌ 不明なインスタンス論理名です: $LOGICAL_NAME"
+  echo "利用可能な論理名:"
+  for key in "${!INSTANCE_MAP[@]}"; do
+    echo "  - $key"
+  done
+  exit 1
+fi
+
+echo "-----------------------------------"
+echo "EC2インスタンスを起動します"
+echo "論理名       : $LOGICAL_NAME"
+echo "インスタンスID: $INSTANCE_ID"
+echo "-----------------------------------"
+echo -n "本当に起動しますか？ (y/N): "
+read ANSWER
+
+case "$ANSWER" in
+  y|Y)
+    echo "起動を開始します..."
+    ;;
+  *)
+    echo "起動をキャンセルしました。"
+    exit 0
+    ;;
+esac
+
+# EC2起動
+aws ec2 start-instances --instance-ids "$INSTANCE_ID" > /dev/null 2>&1
+
+if [ $? -eq 0 ]; then
+  echo "✅ EC2インスタンスを起動できました。"
+else
+  echo "❌ EC2インスタンスの起動に失敗しました。"
+  exit 1
+fi
+
