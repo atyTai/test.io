@@ -13,3 +13,196 @@ https://cloud.google.com/vision/pricing?utm_source=chatgpt.com&hl=ja
 100 万は割引対象外
 
 500 万以上は $0.60 に下がる
+
+ーーーーーーーーーーーーーーーーーーーー
+
+全体像（最初に俯瞰）
+
+Google Vision OCRでPDFをOCRする正解ルートはこれ一択です
+
+ローカルPDF
+   ↓
+GCSに一時アップロード
+   ↓
+Vision API（Document Text Detection・非同期）
+   ↓
+OCR結果(JSON)取得
+   ↓
+必要な文字をPythonで抽出
+   ↓
+GCSのPDFを削除
+
+
+⚠️ PDFは必ず非同期API + GCS必須
+（これは仕様で、回避不可）
+
+① Google Cloud プロジェクト作成（初回のみ）
+
+https://console.cloud.google.com/
+
+右上「プロジェクトを作成」
+
+名前は何でもOK（例：ocr-test）
+
+② Vision API を有効化
+
+左メニュー → APIとサービス
+
+「ライブラリ」
+
+Cloud Vision API
+
+有効にする
+
+✔ ここで初めてOCRが使える
+
+③ サービスアカウント作成（超重要）
+
+IAMと管理 → サービスアカウント
+
+「サービスアカウントを作成」
+
+名前：vision-ocr-sa
+
+ロールを付与：
+
+Cloud Vision API User
+
+Storage Object Admin
+
+キー作成
+
+形式：JSON
+
+ダウンロード（超重要）
+
+👉 このJSONが PythonからAPIを叩く鍵
+
+④ GCSバケット作成（1つだけ）
+
+Cloud Storage → バケット
+
+作成
+
+名前：例 ocr-temp-bucket-12345
+
+ロケーション：us（Visionと相性◎）
+
+ストレージクラス：Standard
+
+作成
+
+⑤ ローカルにPython環境準備
+pip install google-cloud-vision google-cloud-storage
+
+⑥ 認証情報をPythonに認識させる
+Windows
+set GOOGLE_APPLICATION_CREDENTIALS=C:\path\to\vision-ocr-sa.json
+
+macOS / Linux
+export GOOGLE_APPLICATION_CREDENTIALS=/path/to/vision-ocr-sa.json
+
+⑦ PDFをGCSにアップロード（Python）
+from google.cloud import storage
+
+bucket_name = "ocr-temp-bucket-12345"
+local_pdf = "test.pdf"
+gcs_pdf = "input/test.pdf"
+
+client = storage.Client()
+bucket = client.bucket(bucket_name)
+blob = bucket.blob(gcs_pdf)
+
+blob.upload_from_filename(local_pdf)
+
+print("PDF uploaded")
+
+⑧ Vision OCR（Document Text Detection・非同期）
+
+これが 核心 です。
+
+from google.cloud import vision_v1 as vision
+
+client = vision.ImageAnnotatorClient()
+
+gcs_source_uri = "gs://ocr-temp-bucket-12345/input/test.pdf"
+gcs_destination_uri = "gs://ocr-temp-bucket-12345/output/"
+
+feature = vision.Feature(
+    type_=vision.Feature.Type.DOCUMENT_TEXT_DETECTION
+)
+
+gcs_source = vision.GcsSource(uri=gcs_source_uri)
+input_config = vision.InputConfig(
+    gcs_source=gcs_source,
+    mime_type="application/pdf"
+)
+
+gcs_destination = vision.GcsDestination(uri=gcs_destination_uri)
+output_config = vision.OutputConfig(
+    gcs_destination=gcs_destination,
+    batch_size=1
+)
+
+async_request = vision.AsyncAnnotateFileRequest(
+    features=[feature],
+    input_config=input_config,
+    output_config=output_config
+)
+
+operation = client.async_batch_annotate_files(
+    requests=[async_request]
+)
+
+print("OCR processing...")
+operation.result(timeout=300)
+print("OCR done")
+
+
+✔ 日本語帳票 → これが最も精度が出る
+
+⑨ OCR結果(JSON)を取得
+import json
+from google.cloud import storage
+
+client = storage.Client()
+bucket = client.bucket(bucket_name)
+
+blobs = bucket.list_blobs(prefix="output/")
+
+for blob in blobs:
+    if blob.name.endswith(".json"):
+        content = blob.download_as_text()
+        data = json.loads(content)
+
+        text = data["responses"][0]["fullTextAnnotation"]["text"]
+        print("===== OCR RESULT =====")
+        print(text)
+
+
+👉 これでPDF全ページの日本語テキストが1つの文字列として取得可能
+
+⑩ GCSのPDFを削除（推奨）
+bucket.blob(gcs_pdf).delete()
+print("PDF deleted")
+
+
+（結果JSONは残してもOK）
+
+⑪ よくある落とし穴（重要）
+問題	原因
+日本語が崩れる	TEXT_DETECTIONを使っている
+精度が低い	同期APIを使っている
+エラー	GCSを使っていない
+認証エラー	JSONキー未設定
+
+👉 Document Text Detection + 非同期 + GCS
+これ以外は使わないでください。
+
+⑫ 無料枠について（再確認）
+
+月1000ページまで無料
+
+クレカ登録なしでも可能（ただし制限あり）
+
+実務利用前には課金必須
