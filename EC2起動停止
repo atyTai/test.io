@@ -128,3 +128,13 @@ else
   exit 1
 fi
 
+ーーーーー
+
+@echo off
+set SCRIPT_DIR=%~dp0
+
+"C:\Program Files\Git\bin\bash.exe" "%SCRIPT_DIR%start-ec2.sh"
+
+pause
+
+
