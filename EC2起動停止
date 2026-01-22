@@ -131,10 +131,30 @@ fi
 ーーーーー
 
 @echo off
+setlocal
+
+REM ==============================
+REM EC2インスタンス名の入力
+REM ==============================
+set /p INSTANCE_NAME=起動するEC2インスタンス名を入力してください: 
+
+if "%INSTANCE_NAME%"=="" (
+    echo インスタンス名が入力されていません。処理を中断します。
+    pause
+    exit /b 1
+)
+
+REM ==============================
+REM .cmd のあるディレクトリ
+REM ==============================
 set SCRIPT_DIR=%~dp0
 
-"C:\Program Files\Git\bin\bash.exe" "%SCRIPT_DIR%start-ec2.sh"
+REM ==============================
+REM Git Bash で .sh を実行（引数付き）
+REM ==============================
+"C:\Program Files\Git\bin\bash.exe" -l "%SCRIPT_DIR%start-ec2.sh" "%INSTANCE_NAME%"
 
 pause
+endlocal
 
 
