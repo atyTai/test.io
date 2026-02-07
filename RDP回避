@@ -1,0 +1,61 @@
+
+
+✅ 全体の流れ（最短ルート）
+
+ローカルPC
+→ AWS CLI
+→ SSM で Windows EC2 に接続
+→ PowerShell でファイルの中身を表示（cat 相当）
+
+① 事前準備（1回だけ）
+
+※ すでにSSMが使えていれば飛ばしてOK
+
+EC2 側
+
+SSM Agent が起動している
+
+EC2のIAMロールに
+AmazonSSMManagedInstanceCore が付与されている
+
+ローカル側
+aws ssm describe-instance-information
+
+
+→ 対象EC2が出てくればOK
+
+② ローカルからEC2（PowerShell）へ接続
+aws ssm start-session --target i-xxxxxxxxxxxx
+
+
+成功すると、EC2の中の PowerShell に入った状態になります
+（見た目は地味ですが、もうEC2の中です）
+
+③ ファイルの中身を表示（cat 相当）
+🔹 例：ログやテキストファイル
+Get-Content "C:\path\to\your\file.txt"
+
+🔹 行数が多い場合（スクロールで見たい）
+Get-Content "C:\path\to\your\file.txt" | more
+
+🔹 最後の100行だけ見たい（ログ用途で超便利）
+Get-Content "C:\path\to\your\file.txt" -Tail 100
+
+🔹 エラーログだけ grep 的に見たい場合
+Get-Content "C:\path\to\your\file.txt" | Select-String "ERROR"
+
+④ ワンコマンドで“入らずに”中身を表示（発展）
+
+対話的に入らず、ローカルから一発で表示もできます。
+
+aws ssm send-command \
+  --document-name "AWS-RunPowerShellScript" \
+  --targets "Key=instanceids,Values=i-xxxxxxxxxxxx" \
+  --parameters commands="Get-Content 'C:\path\to\your\file.txt' -Tail 50"
+
+
+結果は SSM の実行結果として返ってきます
+（CloudShellやCLIのレスポンス、もしくはマネジメントコンソールの実行履歴で確認）
+
+※ 大量ログだとレスポンスが重くなるので
+-Tail で絞る運用がおすすめです。
