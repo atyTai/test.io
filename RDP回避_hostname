@@ -1,0 +1,57 @@
+#!/bin/bash
+
+REGION="ap-northeast-1"
+
+# ===== ここで配列を定義 =====
+PROFILES=("prod" "prod" "dev")
+INSTANCE_IDS=("i-0123456789abcdef0" "i-0abcdef0123456789" "i-0123aaaa4567bbbbc")
+INSTANCE_NAMES=("web-prod-01" "web-prod-02" "web-dev-01")
+
+# ===== 配列のインデックスで2重ループ相当 =====
+for i in "${!PROFILES[@]}"; do
+  PROFILE="${PROFILES[$i]}"
+  INSTANCE_ID="${INSTANCE_IDS[$i]}"
+  INSTANCE_NAME="${INSTANCE_NAMES[$i]}"
+
+  echo "========================================"
+  echo "使用プロファイル: $PROFILE"
+  echo "対象インスタンス: $INSTANCE_NAME ($INSTANCE_ID)"
+
+  COMMAND_ID=$(aws ssm send-command \
+    --profile "$PROFILE" \
+    --document-name "AWS-RunPowerShellScript" \
+    --instance-ids "$INSTANCE_ID" \
+    --parameters commands="hostname" \
+    --region "$REGION" \
+    --query "Command.CommandId" \
+    --output text)
+
+  # 失敗時のガード（SSM未対応など）
+  if [ -z "$COMMAND_ID" ] || [ "$COMMAND_ID" = "None" ]; then
+    echo "⚠️ SSMコマンド送信に失敗しました。スキップします。"
+    continue
+  fi
+
+  # 実行結果取得（少し待つ）
+  sleep 2
+
+  # 非同期のため簡易リトライ
+  for retry in {1..5}; do
+    HOSTNAME=$(aws ssm get-command-invocation \
+      --profile "$PROFILE" \
+      --command-id "$COMMAND_ID" \
+      --instance-id "$INSTANCE_ID" \
+      --region "$REGION" \
+      --query "StandardOutputContent" \
+      --output text 2>/dev/null)
+
+    if [ -n "$HOSTNAME" ] && [ "$HOSTNAME" != "None" ]; then
+      break
+    fi
+    sleep 2
+  done
+
+  echo "hostname: $HOSTNAME"
+  echo ""
+
+done
