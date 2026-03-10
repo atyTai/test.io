@@ -51,6 +51,26 @@ def ocr_pdf():
 
     print("OCR Finished")
 
-
 if __name__ == "__main__":
     ocr_pdf()
+
+----
+
+項目	Vision OCR	Document AI
+用途	文字抽出	帳票解析
+価格	安い	高い
+開発コスト	高い	低い
+精度	普通	高い
+
+
+
+-----
+
+一番効果で帳票に最適なForm ParserをDocument AI Playgroundで無料で試せる
+
+
+
+
+
+
+
