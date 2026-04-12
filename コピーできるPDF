@@ -1,0 +1,19 @@
+ import pyautogui
+import pyperclip
+import time
+
+time.sleep(3)
+
+# 明示的にクリックしてフォーカス
+pyautogui.click(500, 500)  # PDF中央あたり
+time.sleep(0.5)
+
+pyautogui.hotkey("ctrl", "a")
+time.sleep(0.5)
+
+pyautogui.hotkey("ctrl", "c")
+time.sleep(1)  # ←ここ重要（長め）
+
+text = pyperclip.paste()
+
+print(text)
