@@ -144,3 +144,9 @@ Get-MpComputerStatus
 項目	正常
 AMRunningMode	Normal
 RealTimeProtectionEnabled	True
+
+----------------------------------------
+重要リンク
+https://blog.jbs.co.jp/entry/2022/11/15/100027
+https://learn.microsoft.com/ja-jp/intune/device-configuration/endpoint-security/deploy-edr?utm_source=chatgpt.com
+
