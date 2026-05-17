@@ -1,0 +1,146 @@
+まず確認すべき超重要設定
+Intune 管理センター
+
+Microsoft Intune Admin Center
+
+へ行き：
+
+Endpoint security
+
+↓
+
+Microsoft Defender for Endpoint
+
+ここで：
+
+項目	必須
+Connect Windows devices version 10.0.15063 and above to Microsoft Defender for Endpoint	ON
+Allow Microsoft Defender for Endpoint to enforce Endpoint Security Configurations	ON
+
+これが OFF だと、ほぼ出ません。
+
+次に確認
+Defender 側接続
+
+Defender portal:
+
+Microsoft Defender Portal
+
+↓
+
+Settings
+
+↓
+
+Endpoints
+
+↓
+
+Advanced features
+
+ここで：
+
+項目	状態
+Microsoft Intune connection	ON
+
+これも必要です。
+
+次に超重要
+EDR ポリシーが作成されているか
+
+Intune登録だけではダメです。
+
+必要なのは：
+
+Endpoint security
+
+↓
+
+Endpoint detection and response
+
+ここで：
+
+Create Policy
+
+を作成。
+
+設定：
+
+項目	値
+Platform	Windows 10 and later
+Profile	Endpoint detection and response
+
+そして：
+
+Microsoft Defender for Endpoint client configuration package type
+
+を：
+
+Auto from connector
+
+にする。
+
+これを対象デバイスへ割り当て。
+
+これが実質「オンボード命令」です。
+
+
+------------------------------------------------------------------------------------
+https://learn.microsoft.com/en-us/defender-business/mdb-onboard-devices?source=recommendations&view=o365-worldwide&utm_source=chatgpt.com&tabs=Windows10and11
+
+
+さらに確認すべき点
+
+Windows側で：
+
+dsregcmd /status
+
+実行。
+
+見る場所：
+
+項目	正常値
+AzureAdJoined	YES
+MdmUrl	入っている
+DeviceAuthStatus	SUCCESS
+さらに重要
+
+Windows 側で：
+
+sc query sense
+
+結果：
+
+RUNNING
+
+であるべき。
+
+sense サービスは MDE センサーです。
+
+STOPPED や存在しないなら、オンボード未完了。
+
+最終確認
+
+数分〜30分後、
+
+Defender portal：
+
+Assets
+
+↓
+
+Devices
+
+に表示される。
+
+もしまだ出ないなら
+
+これを実行：
+
+Get-MpComputerStatus
+
+確認：
+
+項目	正常
+AMRunningMode	Normal
+RealTimeProtectionEnabled	True
