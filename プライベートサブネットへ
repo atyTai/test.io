@@ -54,3 +54,22 @@ Subnet associations
 ↓
 
 Edit subnet associations
+
+ーーーーーーーーーーーーーーーーーーーーーーーーーーーーーー
+
+AuroraはAWS管理サービスで、
+
+普通：
+
+yum update
+apt update
+Docker pull
+
+などしません。
+
+つまり：
+
+外向きInternet通信ほぼ不要
+
+
+https://qiita.com/Lamaglama39/items/ddaedcd6946bd4375a32
