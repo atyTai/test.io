@@ -1,0 +1,56 @@
+① Private用RouteTable作成
+② Aurora用subnetをそのRTへ関連付け
+
+だけです。
+
+手順
+Step1
+RouteTable作成
+
+VPCコンソール
+
+↓
+Route Tables
+
+↓
+Create route table
+
+作成内容
+Name: private-rt
+VPC: AuroraがあるVPC
+Step2
+Route設定確認
+
+作成したRTを開く
+
+↓
+
+Routes
+
+↓
+
+Edit routes
+
+残すもの
+Destination	Target
+VPC CIDR	local
+
+のみ。
+
+超重要
+0.0.0.0/0 → IGW
+
+を入れない。
+
+Step3
+subnet関連付け変更
+
+作成したRT
+
+↓
+
+Subnet associations
+
+↓
+
+Edit subnet associations
