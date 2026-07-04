@@ -1,4 +1,103 @@
+--------------------------------------------
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudFormation template for EventBridge Ruletest
+Resources:
+  Rule65a2a54d:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: test
+      EventPattern: >-
+        {"source":["aws.ec2","aws.s3","aws.iam","aws.rds"],"detail-type":["AWS
+        API Call via
+        CloudTrail"],"detail":{"eventName":["TerminateInstances","DeleteBucket","DeleteRole","DeleteUser","DeleteDBInstance","DeleteDBCluster"]}}
+      State: ENABLED
+      Description: ''
+      EventBusName: default
+      $metadata:
+        httpStatusCode: 200
+        requestId: 39af9e38-c3da-4f02-afea-a1cdc50cdbfc
+        attempts: 1
+        totalRetryDelay: 0
+      Targets:
+        - Id: Idc053aadd-48c7-43d6-9bee-6d9be59c8836
+          Arn:
+            Fn::Sub: arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:test
+          RoleArn: >-
+            arn:aws:iam::660904711664:role/service-role/Amazon_EventBridge_Invoke_Sns_260916704
+          InputTransformer:
+            InputTemplate: |-
+              {
+                "event": <event>,
+                "user": <user>,
+                "account": <account>,
+                "region": <region>,
+                "time": <time>
+              }
+            InputPathsMap:
+              account: $.account
+              event: $.detail.eventName
+              region: $.region
+              time: $.detail.eventTime
+              user: $.detail.userIdentity.arn
+          RetryPolicy:
+            MaximumRetryAttempts: 3
+            MaximumEventAgeInSeconds: 600
+Parameters: {}
+-----------------------------------------
 
+{
+  "source": ["aws.ec2", "aws.s3", "aws.iam", "aws.rds"],
+  "detail-type": ["AWS API Call via CloudTrail"],
+  "detail": {
+    "eventName": ["TerminateInstances", "DeleteBucket", "DeleteRole", "DeleteUser", "DeleteDBInstance", "DeleteDBCluster"]
+  }
+}
+
+-----------------
+入力パス
+
+{
+  "account": "$.account",
+  "event": "$.detail.eventName",
+  "region": "$.region",
+  "time": "$.detail.eventTime",
+  "user": "$.detail.userIdentity.arn"
+}
+
+テンプレート
+{
+  "event": <event>,
+  "user": <user>,
+  "account": <account>,
+  "region": <region>,
+  "time": <time>
+}
+
+-----------
+
+AWS Notification Message
+受信トレイ
+
+AWS Notifications
+10:42 (0 分前)
+To 自分
+
+{
+  "event": "DeleteBucket",
+  "user": "arn:aws:sts::660904711664:assumed-role/AWSReservedSSO_AdministratorAccess_30530f75a6c8c291/user0",
+  "account": "660904711664",
+  "region": "ap-northeast-1",
+  "time": "2026-07-04T01:42:48Z"
+}
+
+--
+If you wish to stop receiving notifications from this topic, please click or visit the link below to unsubscribe:
+https://sns.ap-northeast-1.amazonaws.com/unsubscribe.html?SubscriptionArn=arn:aws:sns:ap-northeast-1:660904711664:test:1a1041d9-1a85-4938-ae3d-ffbde93012ee&Endpoint=atyy2660.onota@gmail.com
+
+Please do not reply directly to this email. If you have any questions or comments regarding this email, please contact us at https://aws.amazon.com/support
+
+
+------------------------------------------------
 Organizations脱退禁止
 {
   "Version": "2012-10-17",
