@@ -1,0 +1,114 @@
+
+Amazon_EventBridge_Invoke_Event_bus_xxxxx
+ルール転送　EventBridge
+---------
+
+AWSTemplateFormatVersion: "2010-09-09"
+Description: CloudFormation template for EventBridge Rule
+Parameters:
+  IAMRoleName:
+    Type: String
+
+Resources:
+  EventRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Ref IAMRoleName
+
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: TrustEventBridgeService
+            Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceArn: !Sub "arn:aws:events:${AWS::Region}:${AWS::AccountId}:rule/test2"
+                aws:SourceAccount: !Ref AWS::AccountId
+
+      Policies:
+        - PolicyName: putlog-cloudwatchlogs
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: ActionsForResource
+                Effect: Allow
+                Action:
+                  - events:PutEvents
+                Resource:
+                  - arn:aws:events:ap-northeast-1:xxxxxxxxxxx:event-bus/default
+
+  Rule981:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: test2
+      EventPattern:
+        source:
+          - aws.ec2
+          - aws.s3
+          - aws.iam
+          - aws.rds
+        detail-type:
+          - AWS API Call via CloudTrail
+        detail:
+          eventName:
+            - TerminateInstances
+            - DeleteBucket
+            - DeleteRole
+            - DeleteUser
+            - DeleteDBInstance
+            - DeleteDBCluster
+      State: ENABLED
+      Description: ''
+      EventBusName: default
+      Targets:
+        - Id: Idc92a778d-cb99-47da-97af-c03fff069dd3
+          Arn:
+            Fn::Sub: >-
+              arn:${AWS::Partition}:events:${AWS::Region}:xx09047xxxxx:event-bus/default
+          RoleArn: !GetAtt EventRole.Arn
+
+-------------------------------
+
+Lambda作成
+
+AWSTemplateFormatVersion: 2010-09-09
+Parameters:
+  LambdaFunctionName:
+    Type: String
+  IAMRoleforLambda:
+    Type: String
+Resources:
+  FunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Ref IAMRoleforLambda
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+
+  TargetFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Ref LambdaFunctionName
+      Role: !GetAtt FunctionRole.Arn
+      Runtime: python3.9
+      Handler: index.lambda_handler
+      Code:
+        ZipFile: !Sub |
+          import json
+          def lambda_handler(event, context):
+              # TODO implement
+              return {
+                  'statusCode': 200,
+                  'body': json.dumps('Hello from Lambda!Create${LambdaFunctionName}')
+              }
+----------------
