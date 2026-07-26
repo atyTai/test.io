@@ -1,0 +1,12 @@
+SharePoint
+   ↓
+Excel（マスターのデータ）
+
+Power BI
+   ↓
+RLS（行単位の制御）
+OLS（列・テーブル単位の制御）
+   ↓
+Entra IDのユーザーやグループで判定
+   ↓
+ブラウザで閲覧
