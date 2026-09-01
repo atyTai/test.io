@@ -1,0 +1,192 @@
+
+
+はい、これはかなり切り分けできます。
+しかも、
+Entra ID 参加後、そのPCへ「Entraユーザー」だけでなく「元々の別のユーザー」からもRDPできなくなった
+一方、そのPCから外向きに同一ネットワークの別PCへはRDPできる
+という2点が非常に重要です。
+結論から言うと、「Entra IDに参加したことで、PC自体がネットワークから認識されなくなった」可能性はありますが、まず疑うべきはRDP受信側の設定・Windows Firewall・ネットワークプロファイルです。
+Entra ID参加そのものがRDP受信を不能にするわけではありません。MicrosoftもEntra参加済みPCへのRDPを正式にサポートしています。�
+Microsoft Learn +1
+まず一番重要な切り分け
+RDP元PCから、問題のPCのIPアドレスに対してこれを実行してください。
+Test-NetConnection <問題のPCのIPアドレス> -Port 3389
+例えば、
+Test-NetConnection 192.168.1.20 -Port 3389
+結果の
+TcpTestSucceeded : True
+か
+TcpTestSucceeded : False
+が極めて重要です。
+① True の場合
+これは、
+ネットワーク的には問題のPCの3389番ポートまで到達できている
+ということです。
+したがって、
+PCがネットワーク上で認識されていない
+Wi-Fi/LANそのものがおかしい
+ルーターが遮断している
+という可能性はかなり下がります。
+この場合は、
+RDPの認証・ユーザー権限・NLA・Entra ID周辺
+を疑います。
+② False の場合
+こちらなら、かなり話が変わります。
+RDP以前にネットワークまたはWindows Firewallで3389が遮断されています。
+MicrosoftのRDPトラブルシューティングでも、まずネットワーク到達性とFirewall/RDP受信ルールを確認する流れになっています。�
+Microsoft Learn
+今回の状況なら、私は特に
+Entra ID参加によってネットワークプロファイルが「パブリック」になり、Windows Firewallの受信ルールが効いている
+可能性をかなり疑います。
+なぜ「そのPCからはRDPできる」のに「そのPCへRDPできない」のか
+ここ、非常に重要です。
+RDPは、
+A → B
+と
+B → A
+で全く別の通信です。
+今回、
+問題のPC → 同じネットワークのPC
+が成功していても、
+同じネットワークのPC → 問題のPC
+が成功する保証はありません。
+例えば問題PCのFirewallが、
+外向き通信       OK
+内向き3389通信   NG
+なら、まさに今回の状態になります。
+したがって、
+「そのPCから他PCへRDPできる」＝ネットワークは完全に正常
+とは言えません。
+私ならこの順番で調べます
+1. 問題PC自身でIPアドレスを確認
+問題PCで、
+ipconfig
+を実行。
+例えば、
+IPv4 Address : 192.168.1.20
+などを確認します。
+そしてRDP元PCから、
+ping 192.168.1.20
+を試します。
+ただし、pingが失敗しても即「ネットワーク障害」とは判断しないでください。
+Windows FirewallがICMPを遮断していることがあります。
+なので、より重要なのは先ほどの
+Test-NetConnection 192.168.1.20 -Port 3389
+です。
+2. 問題PCで「リモートデスクトップ」が有効か確認
+問題PCで、
+設定 → システム → リモート デスクトップ
+を開き、
+リモート デスクトップ：オン
+を確認。
+MicrosoftもEntra参加PCへのRDPでは、リモートPC側でRDPを有効化することを前提にしています。�
+Microsoft Learn
+3. Windows Firewallを疑う
+ここが今回かなり怪しいです。
+問題PCでPowerShellを管理者として開き、
+Get-NetFirewallRule -DisplayGroup "Remote Desktop" |
+    Select DisplayName, Enabled, Profile
+を実行してください。
+例えば、
+Remote Desktop - User Mode (TCP-In)
+Enabled : True
+Profile : Domain
+などを確認します。
+特に、
+ProfileがPublicなのに、RDPルールがPrivate/Domainだけ
+という状態だと、受信RDPが止まることがあります。
+MicrosoftもRDP受信について、Remote DesktopのTCP/UDP受信Firewallルールが有効になっていることを確認するよう案内しています。�
+Microsoft Learn
+4. ネットワークプロファイルを確認
+問題PCで、
+Get-NetConnectionProfile
+を実行してください。
+例えば、
+Name             : Ethernet
+InterfaceAlias   : Ethernet
+NetworkCategory  : Public
+となっていたら、かなり怪しいです。
+以前は、
+Private
+だったのに、Entra ID参加後に
+Public
+になっている可能性があります。
+特に会社PCなどでは、Entra ID参加やネットワーク構成変更に伴って、このあたりが変化している可能性があります。
+5. RDPサービス自体が動いているか
+問題PCで、
+Get-Service TermService
+結果が、
+Status : Running
+になっているか確認。
+さらに、
+Get-NetTCPConnection -LocalPort 3389 -State Listen
+を実行。
+正常なら3389でLISTENしている状態が確認できます。
+これがなければ、
+そもそもRDPサーバーが待ち受けていない
+という話になります。
+6. ここまでで「ネットワーク」と「RDP」を分離する
+私は今回、これを最重要の分岐にします。
+結果
+疑う場所
+3389 = True
+認証・ユーザー・NLA・Entra ID
+3389 = False
+Firewall・ネットワークプロファイル・RDPサービス
+3389 LISTENなし
+RDPサービス/設定
+3389 LISTENあり＋外部からFalse
+Firewall/ネットワーク
+3389 True＋ログイン失敗
+アカウント/権限/NLA
+そしてEntra ID側
+もし、
+Test-NetConnection <IP> -Port 3389
+が
+TcpTestSucceeded : True
+だった場合、次に見るのがここです。
+Entra参加済みPCでは、RDPするユーザーを適切に認可する必要があります。
+Microsoftの公式ドキュメントでは、EntraユーザーをRemote Desktop Usersに追加する方法として、
+net localgroup "Remote Desktop Users" /add "AzureAD\<UPN>"
+が案内されています。�
+Microsoft Learn
+例えば、
+net localgroup "Remote Desktop Users" /add "AzureAD\user@example.com"
+です。
+ただし、今回、
+元々のローカルユーザーでもRDPできなくなった
+のであれば、これだけが原因とは考えにくいです。
+ここが今回の大きなポイントです。
+つまり私の現時点での優先順位
+今回の症状なら、私はこう考えます。
+第一候補
+Windows Firewall / ネットワークプロファイルの変化
+第二候補
+RDPサービス・RDP受信設定
+第三候補
+Entra ID参加によるRDP認証/NLA周辺の変化
+第四候補
+EntraユーザーのRemote Desktop Users権限
+です。
+特に、
+Entra IDユーザーだけでなく、以前使えていた別ユーザーまでRDPできなくなった
+という事実から、私は最初からEntra IDのユーザー権限だけを追いません。
+「RDP受信そのものが死んでいるのでは？」
+を先に潰します。
+そして、今はまだ設定を変更しない方がいいです
+いきなりFirewallを無効化したり、NLAを無効化したりするより、
+まず問題PC上で次の5つの結果を取得するのが一番効率的です。
+ipconfig
+Get-NetConnectionProfile
+Get-Service TermService
+Get-NetTCPConnection -LocalPort 3389 -State Listen
+そしてRDP元PCから、
+Test-NetConnection <問題PCのIPv4アドレス> -Port 3389
+この5つです。
+これが分かれば、かなり高い確率で
+「ネットワークなのか」「Firewallなのか」「RDPなのか」「Entra認証なのか」
+を一気に絞れます。
+なお、Microsoft公式でもEntra参加済みPCへのRDPはサポートされており、「Entra IDに参加したからRDPできなくなった」という仕様ではありません。むしろ今回の症状は、参加を契機に何らかのWindows側設定・認証条件が変わった、と見るのが自然です。�
+Microsoft Learn
+もし今そのPCを操作できる状態なら、上の5コマンドの結果をそのまま貼ってください。
+そこから私が一つずつ潰していきます。
