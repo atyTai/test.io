@@ -1,0 +1,22 @@
+WinFspをインストール
+SSHFS-Winをインストール
+SSMポートフォワーディング開始
+Explorer → ネットワークドライブの割り当て
+\\sshfs\ユーザー名@localhost!10022
+認証
+EC2のファイルが見えることを確認
+
+----------
+
+1. 下記から、WinFsp、SSHFS-Winの順でインストール
+https://winfsp.dev/rel/?utm_source=chatgpt.com
+
+2. EC2サーバをポートフォワーディング
+
+3. 
+
+Explorer → PC →　ネットワークドライブの割り当て
+\\sshfs\ユーザー名@localhost!10022
+認証
+EC2のファイルが見えることを確認
+
