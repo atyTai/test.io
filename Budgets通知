@@ -1,0 +1,22 @@
+
+
+
+「AWS Budgets: Account <アカウントID> has a budget exceeding your alert threshold」
+--
+AWS Budget Notification 	November 09, 2026 
+AWS Account: 660904711664 	
+AWS Budget Name: My Zero-Spend Budget 	
+
+If you do not recognize the AWS account above, please disregard this email or contact AWS Support. 
+
+
+Dear AWS Customer, 
+
+You requested that we alert you when the actual cost associated with your My Zero-Spend Budget budget exceeds $0.01 for the current month. The month actual cost associated with this budget is $0.01. You can find additional details below and by accessing the AWS Budgets dashboard. 
+
+Budget Name 	Budget Type 	Budgeted Amount 	Alert Type 	Alert Threshold 	ACTUAL Amount 
+My Zero-Spend Budget 	Cost 	$1.00 	ACTUAL 	> $0.01 	$0.01 
+
+Go to the AWS Budgets dashboard 
+
+--
